@@ -57,7 +57,7 @@ export async function coachOverviewText(coach: Coach): Promise<string> {
 export async function clientFocusText(clientId: string): Promise<string> {
   const ctx = await buildClientContext(clientId);
   if (!ctx) return "Client introuvable.";
-  const { client, profile, exercises, recentSessions, completedCount, notes, sleep, nutrition } = ctx;
+  const { client, profile, exercises, recentSessions, completedCount, notes, sleep, nutrition, messages } = ctx;
   const lines: string[] = [];
   lines.push(`# Client: ${client.name}`);
   if (client.age) lines.push(`- Âge: ${client.age}`);
@@ -132,6 +132,14 @@ export async function clientFocusText(clientId: string): Promise<string> {
     lines.push("## Notes (client + coach)");
     for (const n of notes) {
       lines.push(`- [${formatDate(n.created_at)}] (${n.author}) ${n.content}`);
+    }
+    lines.push("");
+  }
+
+  if (messages.length) {
+    lines.push("## Messagerie coach ↔ client (10 derniers)");
+    for (const m of messages.slice(-10)) {
+      lines.push(`- [${formatDate(m.created_at)}] (${m.sender}) ${m.content}`);
     }
   }
 

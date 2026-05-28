@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, Moon, Apple, MessageSquare, Calendar, CheckCircle2, Star, Flame, Send, Loader2 } from "lucide-react";
+import { Dumbbell, Moon, Apple, MessageSquare, Calendar, CheckCircle2, Star, Flame, Send, Loader2, Lock, Mail } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -16,9 +16,26 @@ import type {
   ClientNote,
   SleepLog,
   NutritionLog,
+  ExerciseLog,
+  Message,
 } from "@/lib/db";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+type DraftLog = {
+  exercise_name: string;
+  sets_done: string;
+  reps_done: string;
+  weight_used: string;
+  succeeded: boolean;
+  note: string;
+};
+
+type DraftState = {
+  logs: DraftLog[];
+  rating: number | null;
+  note: string;
+};
 
 export function ClientSpace({
   token,
@@ -30,6 +47,10 @@ export function ClientSpace({
   notes,
   sleep,
   nutrition,
+  messages,
+  todaySession,
+  todayLogs,
+  today,
   brand,
 }: {
   token: string;
@@ -41,10 +62,13 @@ export function ClientSpace({
   notes: ClientNote[];
   sleep: SleepLog[];
   nutrition: NutritionLog[];
+  messages: Message[];
+  todaySession: Session | null;
+  todayLogs: ExerciseLog[];
+  today: string;
   brand: { name: string; logo: string | null; coachName: string };
 }) {
-  const today = new Date();
-  const todayDay = DAYS[today.getDay()];
+  const todayName = DAYS[new Date(today + "T00:00:00").getDay()];
 
   const byDay = new Map<string, ProgramExercise[]>();
   for (const ex of exercises) {
@@ -53,8 +77,8 @@ export function ClientSpace({
     byDay.get(k)!.push(ex);
   }
 
-  const todayExercises = byDay.get(todayDay) ?? [];
-  const upcomingDays = DAYS.filter((d) => d !== todayDay).filter((d) => byDay.has(d)).slice(0, 4);
+  const todayExercises = byDay.get(todayName) ?? [];
+  const upcomingDays = DAYS.filter((d) => d !== todayName).filter((d) => byDay.has(d)).slice(0, 4);
 
   const weeksSinceStart = Math.max(1, Math.floor((Date.now() - client.created_at) / (7 * 24 * 3600 * 1000)));
   const avgPerWeek = (completedCount / weeksSinceStart).toFixed(1);
@@ -116,9 +140,15 @@ export function ClientSpace({
 
         <SessionLogger
           token={token}
-          todayDay={todayDay}
+          clientId={client.id}
+          today={today}
+          todayDay={todayName}
           exercises={todayExercises}
+          todaySession={todaySession}
+          todayLogs={todayLogs}
         />
+
+        <MessagesPanel token={token} initialMessages={messages} coachName={brand.coachName} />
 
         {upcomingDays.length > 0 && (
           <Card>
@@ -266,28 +296,74 @@ function StatCard({
 
 function SessionLogger({
   token,
+  clientId,
+  today,
   todayDay,
   exercises,
+  todaySession,
+  todayLogs,
 }: {
   token: string;
+  clientId: string;
+  today: string;
   todayDay: string;
   exercises: ProgramExercise[];
+  todaySession: Session | null;
+  todayLogs: ExerciseLog[];
 }) {
   const router = useRouter();
-  const [logs, setLogs] = useState(
-    exercises.map((e) => ({
-      exercise_name: e.name,
-      sets_done: e.sets.toString(),
-      reps_done: e.reps,
-      weight_used: e.weight_kg?.toString() ?? "",
-      succeeded: true,
+  const isCompleted = todaySession?.completed === 1;
+  const storageKey = `cp_session_${clientId}_${today}`;
+
+  // Mode lecture seule si la séance est validée
+  if (isCompleted) {
+    return <CompletedSession session={todaySession} logs={todayLogs} todayDay={todayDay} />;
+  }
+
+  // Restaurer depuis localStorage ou initialiser cases décochées
+  const initialState: DraftState = (() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = window.localStorage.getItem(storageKey);
+        if (stored) return JSON.parse(stored) as DraftState;
+      } catch {}
+    }
+    return {
+      logs: exercises.map((e) => ({
+        exercise_name: e.name,
+        sets_done: e.sets.toString(),
+        reps_done: e.reps,
+        weight_used: e.weight_kg?.toString() ?? "",
+        succeeded: false,
+        note: "",
+      })),
+      rating: null,
       note: "",
-    }))
-  );
-  const [rating, setRating] = useState<number | null>(null);
-  const [note, setNote] = useState("");
+    };
+  })();
+
+  const [draft, setDraft] = useState<DraftState>(initialState);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const isFirst = useRef(true);
+
+  // Persister le brouillon dans localStorage à chaque modif
+  useEffect(() => {
+    if (isFirst.current) {
+      isFirst.current = false;
+      return;
+    }
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(draft));
+    } catch {}
+  }, [draft, storageKey]);
+
+  function updateLog(i: number, patch: Partial<DraftLog>) {
+    setDraft((d) => ({
+      ...d,
+      logs: d.logs.map((l, idx) => (idx === i ? { ...l, ...patch } : l)),
+    }));
+  }
 
   async function submit() {
     setSaving(true);
@@ -296,11 +372,11 @@ function SessionLogger({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        date: isoDate(),
+        date: today,
         day_label: todayDay,
-        rating,
-        client_note: note,
-        exercises: logs.map((l) => ({
+        rating: draft.rating,
+        client_note: draft.note,
+        exercises: draft.logs.map((l) => ({
           exercise_name: l.exercise_name,
           sets_done: l.sets_done ? parseInt(l.sets_done, 10) : null,
           reps_done: l.reps_done,
@@ -313,8 +389,8 @@ function SessionLogger({
     setSaving(false);
     if (res.ok) {
       setSaved(true);
-      setNote("");
-      setRating(null);
+      // Clear localStorage après validation
+      try { window.localStorage.removeItem(storageKey); } catch {}
       router.refresh();
     }
   }
@@ -335,6 +411,8 @@ function SessionLogger({
     );
   }
 
+  const someChecked = draft.logs.some((l) => l.succeeded);
+
   return (
     <Card className="border-[var(--brand-primary)]/30">
       <CardHeader>
@@ -342,25 +420,34 @@ function SessionLogger({
           <Dumbbell className="h-4 w-4 text-[var(--brand-primary)]" />
           Entraînement du jour — {todayDay}
         </CardTitle>
-        <CardDescription>Coche, ajuste, et laisse une note après ta séance.</CardDescription>
+        <CardDescription>
+          Coche chaque exercice quand tu l&apos;as fait, ajuste les valeurs et ajoute une note.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {logs.map((l, i) => (
+        {draft.logs.map((l, i) => (
           <div
             key={i}
-            className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 space-y-2"
+            className={cn(
+              "p-3 rounded-lg border space-y-2 transition-colors",
+              l.succeeded
+                ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20"
+                : "border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50"
+            )}
           >
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="font-medium text-sm">{l.exercise_name}</div>
-              <label className="flex items-center gap-2 text-xs">
+              <div className="font-medium text-sm flex items-center gap-2">
+                {l.succeeded && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                {l.exercise_name}
+              </div>
+              <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={l.succeeded}
-                  onChange={(e) =>
-                    setLogs((p) => p.map((x, idx) => (idx === i ? { ...x, succeeded: e.target.checked } : x)))
-                  }
+                  onChange={(e) => updateLog(i, { succeeded: e.target.checked })}
+                  className="h-4 w-4 cursor-pointer accent-[var(--brand-primary)]"
                 />
-                {l.succeeded ? "Réussi" : "Pas réussi"}
+                {l.succeeded ? "Fait ✓" : "Non fait"}
               </label>
             </div>
             <div className="grid grid-cols-3 gap-2">
@@ -369,9 +456,7 @@ function SessionLogger({
                 <Input
                   type="number"
                   value={l.sets_done}
-                  onChange={(e) =>
-                    setLogs((p) => p.map((x, idx) => (idx === i ? { ...x, sets_done: e.target.value } : x)))
-                  }
+                  onChange={(e) => updateLog(i, { sets_done: e.target.value })}
                   className="h-8 text-sm"
                 />
               </div>
@@ -379,9 +464,7 @@ function SessionLogger({
                 <Label className="text-[10px]">Reps</Label>
                 <Input
                   value={l.reps_done}
-                  onChange={(e) =>
-                    setLogs((p) => p.map((x, idx) => (idx === i ? { ...x, reps_done: e.target.value } : x)))
-                  }
+                  onChange={(e) => updateLog(i, { reps_done: e.target.value })}
                   className="h-8 text-sm"
                 />
               </div>
@@ -389,9 +472,7 @@ function SessionLogger({
                 <Label className="text-[10px]">Poids (kg)</Label>
                 <Input
                   value={l.weight_used}
-                  onChange={(e) =>
-                    setLogs((p) => p.map((x, idx) => (idx === i ? { ...x, weight_used: e.target.value } : x)))
-                  }
+                  onChange={(e) => updateLog(i, { weight_used: e.target.value })}
                   className="h-8 text-sm"
                 />
               </div>
@@ -399,9 +480,7 @@ function SessionLogger({
             <Input
               placeholder="Note (optionnel) — ex: bras qui tremblent à la 3ème série"
               value={l.note}
-              onChange={(e) =>
-                setLogs((p) => p.map((x, idx) => (idx === i ? { ...x, note: e.target.value } : x)))
-              }
+              onChange={(e) => updateLog(i, { note: e.target.value })}
               className="h-8 text-xs"
             />
           </div>
@@ -414,10 +493,10 @@ function SessionLogger({
               <button
                 key={n}
                 type="button"
-                onClick={() => setRating(n)}
+                onClick={() => setDraft((d) => ({ ...d, rating: n }))}
                 className={cn(
                   "h-9 w-9 rounded-md border text-sm font-medium transition-colors",
-                  rating === n
+                  draft.rating === n
                     ? "bg-[var(--brand-primary)] text-white border-transparent"
                     : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                 )}
@@ -428,12 +507,23 @@ function SessionLogger({
           </div>
           <Textarea
             placeholder="Comment t'es-tu senti(e) ? Énergie, motivation, ce qui a bien marché ou pas..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+            value={draft.note}
+            onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
           />
         </div>
 
-        <Button onClick={submit} disabled={saving} className="w-full" size="lg">
+        <div className="text-xs text-zinc-500">
+          {someChecked
+            ? "Ta progression est sauvegardée localement. Tu peux quitter et revenir."
+            : "Coche au moins un exercice pour pouvoir valider."}
+        </div>
+
+        <Button
+          onClick={submit}
+          disabled={saving || !someChecked}
+          className="w-full"
+          size="lg"
+        >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
           {saving ? "Enregistrement..." : "Valider ma séance"}
         </Button>
@@ -442,6 +532,204 @@ function SessionLogger({
             ✓ Séance enregistrée. Ton coach va recevoir le récap.
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CompletedSession({
+  session,
+  logs,
+  todayDay,
+}: {
+  session: Session;
+  logs: ExerciseLog[];
+  todayDay: string;
+}) {
+  return (
+    <Card className="border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20">
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+          <Lock className="h-4 w-4" />
+          Séance du jour validée — {todayDay}
+        </CardTitle>
+        <CardDescription>
+          Tu as validé ta séance{session.completed_at ? ` ${timeAgo(session.completed_at)}` : ""}. À demain ! 💪
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {logs.length === 0 ? (
+          <div className="text-sm text-zinc-500">Aucun exercice enregistré.</div>
+        ) : (
+          logs.map((l) => (
+            <div
+              key={l.id}
+              className={cn(
+                "p-3 rounded-lg border opacity-80 cursor-not-allowed",
+                l.succeeded
+                  ? "border-emerald-300 bg-white/50 dark:border-emerald-900 dark:bg-zinc-900/50"
+                  : "border-zinc-300 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900/50"
+              )}
+            >
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="font-medium text-sm flex items-center gap-2">
+                  {l.succeeded ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <div className="h-4 w-4 rounded-full border-2 border-zinc-300" />
+                  )}
+                  {l.exercise_name}
+                </div>
+                <div className="text-xs text-zinc-500">
+                  {l.sets_done ?? "—"}×{l.reps_done ?? "—"}
+                  {l.weight_used ? ` @ ${l.weight_used}kg` : ""}
+                </div>
+              </div>
+              {l.note && <div className="text-xs text-zinc-500 mt-1 italic">&laquo; {l.note} &raquo;</div>}
+            </div>
+          ))
+        )}
+        {(session.rating || session.client_note) && (
+          <div className="pt-2 border-t border-emerald-200 dark:border-emerald-900 space-y-1">
+            {session.rating && (
+              <div className="text-sm flex items-center gap-2">
+                <Star className="h-4 w-4 text-amber-500" />
+                Note de la séance : {session.rating}/5
+              </div>
+            )}
+            {session.client_note && (
+              <div className="text-sm text-zinc-600 dark:text-zinc-400 italic">
+                &laquo; {session.client_note} &raquo;
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MessagesPanel({
+  token,
+  initialMessages,
+  coachName,
+}: {
+  token: string;
+  initialMessages: Message[];
+  coachName: string;
+}) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages]);
+
+  // Marquer comme lus à l'ouverture
+  useEffect(() => {
+    fetch(`/api/client/${token}/messages`).catch(() => {});
+    // Polling toutes les 30s pour récupérer les nouveaux messages du coach
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/client/${token}/messages`);
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data.messages ?? []);
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || sending) return;
+    setSending(true);
+    const res = await fetch(`/api/client/${token}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: text }),
+    });
+    setSending(false);
+    if (res.ok) {
+      setInput("");
+      const fetchRes = await fetch(`/api/client/${token}/messages`);
+      if (fetchRes.ok) {
+        const data = await fetchRes.json();
+        setMessages(data.messages ?? []);
+      }
+      router.refresh();
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Mail className="h-4 w-4 text-[var(--brand-primary)]" />
+          Messagerie avec {coachName.split(" ")[0]}
+        </CardTitle>
+        <CardDescription>Pose une question, signale un souci, ou réponds à ton coach.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div
+          ref={scrollRef}
+          className="max-h-72 overflow-y-auto space-y-2 p-1"
+        >
+          {messages.length === 0 ? (
+            <div className="text-sm text-zinc-500 text-center py-6">
+              Aucun message. Écris le premier 👇
+            </div>
+          ) : (
+            messages.map((m) => (
+              <div
+                key={m.id}
+                className={cn("flex", m.sender === "client" ? "justify-end" : "justify-start")}
+              >
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-3 py-2 text-sm",
+                    m.sender === "client"
+                      ? "bg-[var(--brand-primary)] text-white rounded-br-sm"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-bl-sm"
+                  )}
+                >
+                  <div className="whitespace-pre-wrap">{m.content}</div>
+                  <div
+                    className={cn(
+                      "text-[10px] mt-1",
+                      m.sender === "client" ? "text-white/70" : "text-zinc-500"
+                    )}
+                  >
+                    {timeAgo(m.created_at)}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="flex gap-2 items-end">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            placeholder="Écris ton message..."
+            className="min-h-[44px] resize-none"
+            rows={1}
+            disabled={sending}
+          />
+          <Button onClick={send} disabled={sending || !input.trim()} size="icon">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
@@ -649,3 +937,5 @@ function NoteLogger({ token, notes }: { token: string; notes: ClientNote[] }) {
     </div>
   );
 }
+// formatDate kept for future use
+void formatDate;

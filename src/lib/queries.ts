@@ -7,6 +7,8 @@ import {
   coerceSleep,
   coerceNutrition,
   coerceNote,
+  coerceMessage,
+  coerceExerciseLog,
   type Client,
   type ClientProfile,
   type ProgramExercise,
@@ -14,6 +16,8 @@ import {
   type SleepLog,
   type NutritionLog,
   type ClientNote,
+  type Message,
+  type ExerciseLog,
 } from "./db";
 
 export async function listClients(coachId: string): Promise<Client[]> {
@@ -94,19 +98,59 @@ export async function listNutrition(clientId: string, limit = 30): Promise<Nutri
   return rows.map((r) => coerceNutrition(r as Record<string, unknown>));
 }
 
+export async function listMessages(clientId: string, limit = 100): Promise<Message[]> {
+  const sql = await ensureDb();
+  const rows = await sql`
+    SELECT * FROM messages WHERE client_id = ${clientId}
+    ORDER BY created_at ASC LIMIT ${limit}
+  `;
+  return rows.map((r) => coerceMessage(r as Record<string, unknown>));
+}
+
+export async function getSessionByDate(clientId: string, date: string): Promise<Session | null> {
+  const sql = await ensureDb();
+  const rows = await sql`
+    SELECT * FROM sessions WHERE client_id = ${clientId} AND date = ${date}
+    ORDER BY created_at DESC LIMIT 1
+  `;
+  if (rows.length === 0) return null;
+  return coerceSession(rows[0] as Record<string, unknown>);
+}
+
+export async function listExerciseLogsForSession(sessionId: string): Promise<ExerciseLog[]> {
+  const sql = await ensureDb();
+  const rows = await sql`
+    SELECT * FROM exercise_logs WHERE session_id = ${sessionId}
+    ORDER BY created_at ASC
+  `;
+  return rows.map((r) => coerceExerciseLog(r as Record<string, unknown>));
+}
+
 export async function buildClientContext(clientId: string) {
   const sql = await ensureDb();
   const rows = await sql`SELECT * FROM clients WHERE id = ${clientId}`;
   if (rows.length === 0) return null;
   const client = coerceClient(rows[0] as Record<string, unknown>);
-  const [profile, exercises, recentSessions, completedCount, notes, sleep, nutrition] = await Promise.all([
-    getClientProfile(clientId),
-    listExercises(clientId),
-    listSessions(clientId, 20),
-    countCompletedSessions(clientId),
-    listNotes(clientId, 20),
-    listSleep(clientId, 14),
-    listNutrition(clientId, 14),
-  ]);
-  return { client, profile, exercises, recentSessions, completedCount, notes, sleep, nutrition };
+  const [profile, exercises, recentSessions, completedCount, notes, sleep, nutrition, messages] =
+    await Promise.all([
+      getClientProfile(clientId),
+      listExercises(clientId),
+      listSessions(clientId, 20),
+      countCompletedSessions(clientId),
+      listNotes(clientId, 20),
+      listSleep(clientId, 14),
+      listNutrition(clientId, 14),
+      listMessages(clientId, 50),
+    ]);
+  return {
+    client,
+    profile,
+    exercises,
+    recentSessions,
+    completedCount,
+    notes,
+    sleep,
+    nutrition,
+    messages,
+  };
 }

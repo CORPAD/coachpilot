@@ -126,6 +126,15 @@ const SCHEMA = `
     created_at BIGINT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    sender TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at BIGINT NOT NULL,
+    read_at BIGINT
+  );
+
   CREATE INDEX IF NOT EXISTS idx_clients_coach ON clients(coach_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_client ON sessions(client_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
@@ -133,6 +142,7 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_notes_client ON client_notes(client_id);
   CREATE INDEX IF NOT EXISTS idx_sleep_client ON sleep_logs(client_id);
   CREATE INDEX IF NOT EXISTS idx_nutrition_client ON nutrition_logs(client_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_client ON messages(client_id);
 `;
 
 async function init(): Promise<void> {
@@ -261,6 +271,15 @@ export type ClientNote = {
   created_at: number;
 };
 
+export type Message = {
+  id: string;
+  client_id: string;
+  sender: "client" | "coach";
+  content: string;
+  created_at: number;
+  read_at: number | null;
+};
+
 // Neon returns BIGINT as string; coerce numeric columns when reading.
 export function coerceCoach(row: Record<string, unknown>): Coach {
   return { ...row, created_at: Number(row.created_at) } as Coach;
@@ -318,4 +337,20 @@ export function coerceNutrition(row: Record<string, unknown>): NutritionLog {
 }
 export function coerceNote(row: Record<string, unknown>): ClientNote {
   return { ...row, created_at: Number(row.created_at) } as ClientNote;
+}
+export function coerceMessage(row: Record<string, unknown>): Message {
+  return {
+    ...row,
+    created_at: Number(row.created_at),
+    read_at: row.read_at == null ? null : Number(row.read_at),
+  } as Message;
+}
+export function coerceExerciseLog(row: Record<string, unknown>): ExerciseLog {
+  return {
+    ...row,
+    sets_done: row.sets_done == null ? null : Number(row.sets_done),
+    weight_used: row.weight_used == null ? null : Number(row.weight_used),
+    succeeded: row.succeeded == null ? null : Number(row.succeeded),
+    created_at: Number(row.created_at),
+  } as ExerciseLog;
 }

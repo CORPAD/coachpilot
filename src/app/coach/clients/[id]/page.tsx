@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { ChevronLeft, Edit, Copy, Calendar, Dumbbell, Moon, Apple, MessageSquare, Trash2 } from "lucide-react";
+import { ChevronLeft, Edit, Copy, Calendar, Dumbbell, Moon, Apple, MessageSquare, Trash2, Mail } from "lucide-react";
 import { requireCoach } from "@/lib/auth";
 import { buildClientContext } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { formatDate, timeAgo } from "@/lib/utils";
 import { ClientAIButton } from "@/components/client-ai-button";
 import { ClientLinkCopy } from "@/components/client-link-copy";
 import { DeleteClientButton } from "@/components/delete-client-button";
+import { CoachMessages } from "@/components/coach-messages";
 
 export default async function ClientDetailPage({
   params,
@@ -22,7 +23,8 @@ export default async function ClientDetailPage({
   const ctx = await buildClientContext(id);
   if (!ctx || ctx.client.coach_id !== coach.id) redirect("/coach/clients");
 
-  const { client, profile, exercises, recentSessions, completedCount, notes, sleep, nutrition } = ctx;
+  const { client, profile, exercises, recentSessions, completedCount, notes, sleep, nutrition, messages } = ctx;
+  const unreadFromClient = messages.filter((m) => m.sender === "client" && !m.read_at).length;
 
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -193,6 +195,24 @@ export default async function ClientDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      <Card className={unreadFromClient > 0 ? "border-[var(--brand-primary)]" : ""}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-4 w-4" />
+            Messagerie avec {client.name.split(" ")[0]}
+            {unreadFromClient > 0 && (
+              <Badge variant="default" className="ml-auto">
+                {unreadFromClient} nouveau{unreadFromClient > 1 ? "x" : ""}
+              </Badge>
+            )}
+          </CardTitle>
+          <CardDescription>Envoie un mot, une félicitation ou un rappel.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CoachMessages clientId={client.id} clientName={client.name} initialMessages={messages} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
