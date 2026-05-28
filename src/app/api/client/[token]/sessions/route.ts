@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 import { ensureDb } from "@/lib/db";
-import { listSessions } from "@/lib/queries";
+import { listSessions, getSessionByDate } from "@/lib/queries";
 import { requireClientByToken } from "@/lib/client-token";
+import { dayNameFromIsoDate } from "@/lib/utils";
 
 const logSchema = z.object({
-  session_id: z.string().optional().nullable(),
-  date: z.string(),
-  day_label: z.string().optional().default(""),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   rating: z.coerce.number().int().min(1).max(5).optional().nullable(),
   client_note: z.string().optional().default(""),
   exercises: z
@@ -40,21 +39,34 @@ export async function POST(req: Request, ctx: { params: Promise<{ token: string 
   const parsed = logSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   const data = parsed.data;
-  const sql = await ensureDb();
-  const sid = data.session_id ?? nanoid();
-  const now = Date.now();
 
-  if (data.session_id) {
+  // Empêche les doublons : si une séance existe déjà pour cette date, on refuse.
+  const existing = await getSessionByDate(r.id, data.date);
+  if (existing && existing.completed === 1) {
+    return NextResponse.json(
+      { error: "Une séance est déjà validée pour cette date" },
+      { status: 409 }
+    );
+  }
+
+  const sql = await ensureDb();
+  const sid = existing?.id ?? nanoid();
+  const now = Date.now();
+  const dayLabel = dayNameFromIsoDate(data.date);
+
+  if (existing) {
     await sql`
       UPDATE sessions
       SET completed=1, completed_at=${now}, rating=${data.rating ?? null},
-          client_note=${data.client_note || null}
+          client_note=${data.client_note || null}, day_label=${dayLabel}
       WHERE id=${sid} AND client_id=${r.id}
     `;
+    // Reset les logs précédents pour éviter les doublons
+    await sql`DELETE FROM exercise_logs WHERE session_id=${sid}`;
   } else {
     await sql`
       INSERT INTO sessions (id, client_id, date, day_label, completed, completed_at, rating, client_note, created_at)
-      VALUES (${sid}, ${r.id}, ${data.date}, ${data.day_label || null}, 1, ${now},
+      VALUES (${sid}, ${r.id}, ${data.date}, ${dayLabel}, 1, ${now},
               ${data.rating ?? null}, ${data.client_note || null}, ${now})
     `;
   }

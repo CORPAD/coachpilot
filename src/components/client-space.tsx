@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatDate, isoDate, timeAgo } from "@/lib/utils";
+import { cn, formatDate, formatDayWithName, dayNameFromIsoDate, timeAgo } from "@/lib/utils";
 import type {
   Client,
   ClientProfile,
@@ -21,6 +21,9 @@ import type {
 } from "@/lib/db";
 
 const DAYS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+void DAYS;
+void formatDate;
 
 type DraftLog = {
   exercise_name: string;
@@ -68,7 +71,7 @@ export function ClientSpace({
   today: string;
   brand: { name: string; logo: string | null; coachName: string };
 }) {
-  const todayName = DAYS[new Date(today + "T00:00:00").getDay()];
+  const todayName = dayNameFromIsoDate(today);
 
   const byDay = new Map<string, ProgramExercise[]>();
   for (const ex of exercises) {
@@ -191,7 +194,7 @@ export function ClientSpace({
             </CardHeader>
             <CardContent>
               <div className="text-sm mb-4">{profile.nutrition_goals}</div>
-              <NutritionLogger token={token} recent={nutrition} />
+              <NutritionLogger token={token} today={today} recent={nutrition} />
             </CardContent>
           </Card>
         )}
@@ -205,7 +208,7 @@ export function ClientSpace({
             <CardDescription>Note ta nuit pour aider l&apos;IA et ton coach.</CardDescription>
           </CardHeader>
           <CardContent>
-            <SleepLogger token={token} recent={sleep} />
+            <SleepLogger token={token} today={today} recent={sleep} />
           </CardContent>
         </Card>
 
@@ -245,7 +248,7 @@ export function ClientSpace({
                       )}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{s.date}</div>
+                      <div className="text-sm font-medium">{formatDayWithName(s.date)}</div>
                       {s.client_note && (
                         <div className="text-xs text-zinc-500 line-clamp-1">{s.client_note}</div>
                       )}
@@ -401,7 +404,7 @@ function SessionLogger({
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Dumbbell className="h-4 w-4 text-[var(--brand-primary)]" />
-            Entraînement du jour ({todayDay})
+            {formatDayWithName(today)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -418,10 +421,10 @@ function SessionLogger({
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Dumbbell className="h-4 w-4 text-[var(--brand-primary)]" />
-          Entraînement du jour — {todayDay}
+          Entraînement de ce {todayDay.toLowerCase()}
         </CardTitle>
         <CardDescription>
-          Coche chaque exercice quand tu l&apos;as fait, ajuste les valeurs et ajoute une note.
+          {formatDayWithName(today)} — Coche chaque exercice quand tu l&apos;as fait, ajuste les valeurs et ajoute une note.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -546,12 +549,13 @@ function CompletedSession({
   logs: ExerciseLog[];
   todayDay: string;
 }) {
+  void todayDay;
   return (
     <Card className="border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
           <Lock className="h-4 w-4" />
-          Séance du jour validée — {todayDay}
+          Séance validée — {formatDayWithName(session.date)}
         </CardTitle>
         <CardDescription>
           Tu as validé ta séance{session.completed_at ? ` ${timeAgo(session.completed_at)}` : ""}. À demain ! 💪
@@ -735,14 +739,59 @@ function MessagesPanel({
   );
 }
 
-function SleepLogger({ token, recent }: { token: string; recent: SleepLog[] }) {
+function SleepLogger({
+  token,
+  today,
+  recent,
+}: {
+  token: string;
+  today: string;
+  recent: SleepLog[];
+}) {
   const router = useRouter();
   const [quality, setQuality] = useState<number | null>(null);
   const [hours, setHours] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const today = isoDate();
   const todayLog = recent.find((r) => r.date === today);
+
+  // Locked : sommeil déjà enregistré aujourd'hui
+  if (todayLog) {
+    return (
+      <div className="rounded-lg border border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20 p-3 space-y-2">
+        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-sm font-medium">
+          <Lock className="h-4 w-4" />
+          Sommeil enregistré pour aujourd&apos;hui
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div
+                key={n}
+                className={cn(
+                  "h-7 w-7 rounded-md border text-xs font-medium flex items-center justify-center",
+                  todayLog.quality && n <= todayLog.quality
+                    ? "bg-[var(--brand-primary)] text-white border-transparent"
+                    : "border-zinc-300 dark:border-zinc-700 text-zinc-400"
+                )}
+              >
+                {n}
+              </div>
+            ))}
+          </div>
+          {todayLog.hours && (
+            <Badge variant="muted">{todayLog.hours}h</Badge>
+          )}
+        </div>
+        {todayLog.note && (
+          <div className="text-sm text-zinc-600 dark:text-zinc-400 italic">
+            &laquo; {todayLog.note} &raquo;
+          </div>
+        )}
+        <div className="text-xs text-zinc-500">Tu pourras le re-saisir demain.</div>
+      </div>
+    );
+  }
 
   async function submit() {
     if (!quality) return;
@@ -763,11 +812,6 @@ function SleepLogger({ token, recent }: { token: string; recent: SleepLog[] }) {
 
   return (
     <div className="space-y-3">
-      {todayLog && (
-        <div className="text-xs text-zinc-500">
-          Aujourd&apos;hui : {todayLog.quality}/5{todayLog.hours ? ` (${todayLog.hours}h)` : ""}
-        </div>
-      )}
       <div>
         <Label className="text-sm">Qualité du sommeil</Label>
         <div className="flex gap-1 mt-1">
@@ -813,13 +857,52 @@ function SleepLogger({ token, recent }: { token: string; recent: SleepLog[] }) {
   );
 }
 
-function NutritionLogger({ token, recent }: { token: string; recent: NutritionLog[] }) {
+function NutritionLogger({
+  token,
+  today,
+  recent,
+}: {
+  token: string;
+  today: string;
+  recent: NutritionLog[];
+}) {
   const router = useRouter();
   const [met, setMet] = useState<boolean | null>(null);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
-  const today = isoDate();
   const todayLog = recent.find((r) => r.date === today);
+
+  if (todayLog) {
+    const ok = todayLog.goal_met === 1;
+    return (
+      <div
+        className={cn(
+          "rounded-lg border p-3 space-y-2",
+          ok
+            ? "border-emerald-300 bg-emerald-50/30 dark:border-emerald-900 dark:bg-emerald-950/20"
+            : "border-red-300 bg-red-50/30 dark:border-red-900 dark:bg-red-950/20"
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center gap-2 text-sm font-medium",
+            ok
+              ? "text-emerald-700 dark:text-emerald-400"
+              : "text-red-700 dark:text-red-400"
+          )}
+        >
+          <Lock className="h-4 w-4" />
+          Nutrition enregistrée : {ok ? "objectif atteint ✓" : "pas atteint ✗"}
+        </div>
+        {todayLog.note && (
+          <div className="text-sm text-zinc-600 dark:text-zinc-400 italic">
+            &laquo; {todayLog.note} &raquo;
+          </div>
+        )}
+        <div className="text-xs text-zinc-500">Tu pourras re-saisir demain.</div>
+      </div>
+    );
+  }
 
   async function submit() {
     if (met === null) return;
@@ -839,11 +922,6 @@ function NutritionLogger({ token, recent }: { token: string; recent: NutritionLo
 
   return (
     <div className="space-y-3">
-      {todayLog && (
-        <div className="text-xs text-zinc-500">
-          Aujourd&apos;hui : {todayLog.goal_met ? "✓ objectif atteint" : "✗ pas atteint"}
-        </div>
-      )}
       <Label className="text-sm">As-tu respecté ton objectif aujourd&apos;hui ?</Label>
       <div className="flex gap-2">
         <button

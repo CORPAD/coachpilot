@@ -7,7 +7,7 @@ import { buildClientContext } from "@/lib/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, timeAgo } from "@/lib/utils";
+import { formatDate, formatDayWithName, timeAgo } from "@/lib/utils";
 import { ClientAIButton } from "@/components/client-ai-button";
 import { ClientLinkCopy } from "@/components/client-link-copy";
 import { DeleteClientButton } from "@/components/delete-client-button";
@@ -287,11 +287,14 @@ export default async function ClientDetailPage({
                     className={`h-2 w-2 rounded-full ${s.completed ? "bg-emerald-500" : "bg-zinc-300"}`}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium">
-                      {s.date} {s.day_label && <span className="text-zinc-500">— {s.day_label}</span>}
-                    </div>
+                    <div className="text-sm font-medium">{formatDayWithName(s.date)}</div>
                     {s.client_note && (
                       <div className="text-xs text-zinc-500 truncate mt-0.5">{s.client_note}</div>
+                    )}
+                    {s.completed_at && (
+                      <div className="text-[10px] text-zinc-400">
+                        Validée {timeAgo(s.completed_at)}
+                      </div>
                     )}
                   </div>
                   {s.rating && <Badge variant="outline">{s.rating}/5</Badge>}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ensureDb } from "@/lib/db";
 import { UserPlus, Users, Calendar, TrendingUp, Sparkles } from "lucide-react";
 import { CoachSuggestions } from "@/components/coach-suggestions";
+import { formatDayWithName, timeAgo } from "@/lib/utils";
 
 export default async function CoachDashboard() {
   const coach = await requireCoach();
@@ -117,9 +118,7 @@ export default async function CoachDashboard() {
                       <div className="font-medium truncate">{c.name}</div>
                       <div className="text-xs text-zinc-500 truncate">{c.email ?? "Sans email"}</div>
                     </div>
-                    <Badge variant="muted">
-                      {new Date(c.created_at).toLocaleDateString("fr-FR")}
-                    </Badge>
+                    <Badge variant="muted">{timeAgo(c.created_at)}</Badge>
                   </Link>
                 ))}
               </div>
@@ -159,6 +158,10 @@ export default async function CoachDashboard() {
                   <div className="flex-1">
                     <div className="font-medium text-sm">
                       {a.client_name} a complété sa séance
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-0.5">
+                      {formatDayWithName(a.date)}
+                      {a.completed_at && ` · ${timeAgo(Number(a.completed_at))}`}
                     </div>
                     {a.client_note && (
                       <div className="text-sm text-zinc-500 mt-1 line-clamp-2">
