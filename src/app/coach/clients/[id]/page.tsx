@@ -70,7 +70,7 @@ export default async function ClientDetailPage({
             <Link href={`/coach/clients/${client.id}/edit`}>
               <Button variant="outline">
                 <Edit className="h-4 w-4" />
-                Modifier
+                Modifier la fiche
               </Button>
             </Link>
           </div>
@@ -129,7 +129,15 @@ export default async function ClientDetailPage({
         {profile && (
           <Card>
             <CardHeader>
-              <CardTitle>Profil & objectifs</CardTitle>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle>Profil & objectifs</CardTitle>
+                <Link href={`/coach/clients/${client.id}/edit`}>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-3.5 w-3.5" />
+                    Modifier
+                  </Button>
+                </Link>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {profile.muscular_goals && (
@@ -168,11 +176,27 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Programme d&apos;entraînement</CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle>Programme d&apos;entraînement</CardTitle>
+              <Link href={`/coach/clients/${client.id}/edit#programme`}>
+                <Button variant="outline" size="sm">
+                  <Edit className="h-3.5 w-3.5" />
+                  Modifier
+                </Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             {exercises.length === 0 ? (
-              <div className="text-sm text-zinc-500">Aucun exercice configuré.</div>
+              <div className="space-y-3">
+                <div className="text-sm text-zinc-500">Aucun exercice configuré.</div>
+                <Link href={`/coach/clients/${client.id}/edit#programme`}>
+                  <Button size="sm">
+                    <Edit className="h-3.5 w-3.5" />
+                    Créer le programme
+                  </Button>
+                </Link>
+              </div>
             ) : (
               <div className="space-y-4">
                 {Array.from(byDay.entries()).map(([day, list]) => (

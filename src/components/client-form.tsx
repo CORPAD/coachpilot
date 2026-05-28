@@ -368,7 +368,7 @@ export function ClientForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="programme" className="scroll-mt-6">
         <CardHeader>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
