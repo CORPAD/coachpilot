@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ensureDb } from "@/lib/db";
 import { UserPlus, Users, Calendar, TrendingUp, Sparkles } from "lucide-react";
 import { CoachSuggestions } from "@/components/coach-suggestions";
+import { CoachAIButton } from "@/components/coach-ai-button";
 import { formatDayWithName, timeAgo } from "@/lib/utils";
 
 export default async function CoachDashboard() {
@@ -54,12 +55,15 @@ export default async function CoachDashboard() {
           <h1 className="text-2xl md:text-3xl font-bold">Bonjour {coach.name.split(" ")[0]} 👋</h1>
           <p className="text-zinc-500 mt-1">Voici l&apos;état de tes clients aujourd&apos;hui.</p>
         </div>
-        <Link href="/coach/clients/new">
-          <Button size="lg">
-            <UserPlus className="h-4 w-4" />
-            Nouveau client
-          </Button>
-        </Link>
+        <div className="flex gap-2 flex-wrap">
+          <CoachAIButton size="lg" variant="outline" />
+          <Link href="/coach/clients/new">
+            <Button size="lg">
+              <UserPlus className="h-4 w-4" />
+              Nouveau client
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -3,6 +3,7 @@ import { requireCoach } from "@/lib/auth";
 import { listClients } from "@/lib/queries";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CoachAIButton } from "@/components/coach-ai-button";
 import { UserPlus, Users } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -17,12 +18,15 @@ export default async function ClientsPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Mes clients</h1>
           <p className="text-zinc-500 mt-1">{clients.length} client{clients.length > 1 ? "s" : ""} au total</p>
         </div>
-        <Link href="/coach/clients/new">
-          <Button>
-            <UserPlus className="h-4 w-4" />
-            Nouveau client
-          </Button>
-        </Link>
+        <div className="flex gap-2 flex-wrap">
+          <CoachAIButton variant="outline" />
+          <Link href="/coach/clients/new">
+            <Button>
+              <UserPlus className="h-4 w-4" />
+              Nouveau client
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {clients.length === 0 ? (

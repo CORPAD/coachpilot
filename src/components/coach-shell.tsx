@@ -90,14 +90,6 @@ export function CoachShell({
         </nav>
 
         <div className="p-3 border-t border-zinc-200 dark:border-zinc-800 space-y-1">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => setAiOpen(true)}
-          >
-            <Sparkles className="h-4 w-4" />
-            Assistant IA
-          </Button>
           <Button variant="ghost" className="w-full justify-start" onClick={logout}>
             <LogOut className="h-4 w-4" />
             Déconnexion
