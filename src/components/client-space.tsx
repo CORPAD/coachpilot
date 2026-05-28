@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatDate, formatDayWithName, dayNameFromIsoDate, timeAgo } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type {
   Client,
   ClientProfile,
@@ -87,24 +88,27 @@ export function ClientSpace({
   const avgPerWeek = (completedCount / weeksSinceStart).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[color:var(--brand-primary)]/5 via-zinc-50 to-[color:var(--brand-accent)]/5 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950">
+    <div className="min-h-screen">
       <header className="bg-white/80 dark:bg-zinc-950/80 backdrop-blur border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="max-w-5xl mx-auto p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {brand.logo ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={brand.logo} alt="logo" className="h-10 w-10 rounded-lg object-cover" />
+              <img src={brand.logo} alt="logo" className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
             ) : (
-              <div className="h-10 w-10 rounded-lg brand-gradient" />
+              <div className="h-10 w-10 rounded-lg brand-gradient flex-shrink-0" />
             )}
-            <div>
-              <div className="font-semibold text-sm">{brand.name}</div>
-              <div className="text-xs text-zinc-500">Coach : {brand.coachName}</div>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm truncate">{brand.name}</div>
+              <div className="text-xs text-zinc-500 truncate">Coach : {brand.coachName}</div>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-sm font-semibold">{client.name}</div>
-            <div className="text-xs text-zinc-500">Bonjour 👋</div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle compact />
+            <div className="text-right hidden sm:block">
+              <div className="text-sm font-semibold">{client.name}</div>
+              <div className="text-xs text-zinc-500">Bonjour 👋</div>
+            </div>
           </div>
         </div>
       </header>
