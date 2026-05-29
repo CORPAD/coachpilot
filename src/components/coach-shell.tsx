@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Home, Users, UserPlus, Settings, LogOut, Sparkles, Menu, X } from "lucide-react";
+import { Home, Users, UserPlus, Settings, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AIAssistant } from "@/components/ai-assistant";
+import { AIMagicButton } from "@/components/ai-magic-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Coach } from "@/lib/db";
 
@@ -114,9 +115,7 @@ export function CoachShell({
           <span className="font-semibold">{brandName}</span>
           <div className="flex items-center gap-2">
             <ThemeToggle compact />
-            <button onClick={() => setAiOpen(true)} aria-label="Assistant IA">
-              <Sparkles className="h-5 w-5 text-[var(--brand-primary)]" />
-            </button>
+            <AIMagicButton size="icon" onClick={() => setAiOpen(true)} />
           </div>
         </header>
 

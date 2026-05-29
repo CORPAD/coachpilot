@@ -35,3 +35,171 @@ body {
 .brand-text {
   color: var(--brand-primary);
 }
+
+/* ===================================================================
+   Bouton IA "magique" — halo multicolore inspiré d'Apple Intelligence
+   =================================================================== */
+
+@property --ai-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.ai-magic {
+  --ai-rainbow:
+    conic-gradient(
+      from var(--ai-angle),
+      #b47cfe 0deg,
+      #fb6ccb 60deg,
+      #ff8064 120deg,
+      #ffd700 180deg,
+      #6dd5fa 240deg,
+      #5b7fff 300deg,
+      #b47cfe 360deg
+    );
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Aura externe floue qui pulse */
+.ai-magic .ai-aura {
+  position: absolute;
+  inset: -8px;
+  border-radius: 22px;
+  background: var(--ai-rainbow);
+  filter: blur(16px);
+  opacity: 0.55;
+  z-index: -2;
+  animation:
+    ai-spin 6s linear infinite,
+    ai-breathe 3.6s ease-in-out infinite;
+}
+
+/* Ring fin gradient autour du bouton */
+.ai-magic .ai-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ai-rainbow);
+  z-index: -1;
+  animation: ai-spin 4s linear infinite;
+}
+
+/* Inner sombre qui contient le texte (laisse 1.5px de ring visible) */
+.ai-magic .ai-inner {
+  position: relative;
+  z-index: 0;
+  margin: 1.5px;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(39 39 42 / 0.95), rgb(9 9 11 / 0.98));
+  color: white;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  height: calc(100% - 3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  transition: transform 150ms ease, background 200ms ease;
+}
+
+/* Petite étincelle dans le coin (subtile) */
+.ai-magic .ai-spark {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.85);
+  opacity: 0.7;
+  animation: ai-twinkle 2.4s ease-in-out infinite;
+}
+
+/* Hover : aura plus intense + très léger lift */
+.ai-magic:hover .ai-aura {
+  opacity: 0.95;
+  filter: blur(22px);
+}
+.ai-magic:hover .ai-inner {
+  transform: translateY(-1px);
+}
+
+.ai-magic:active .ai-inner {
+  transform: translateY(0);
+}
+
+.ai-magic:focus-visible {
+  outline: none;
+}
+.ai-magic:focus-visible .ai-inner {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 0 0 3px rgba(180, 124, 254, 0.4);
+}
+
+/* Variante "icon only" (header mobile, compact) */
+.ai-magic.ai-icon {
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+}
+.ai-magic.ai-icon .ai-inner {
+  padding: 0;
+  width: calc(100% - 3px);
+  justify-content: center;
+}
+
+/* Taille SM (sur fiche client) */
+.ai-magic.ai-sm .ai-inner {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 0.875rem;
+}
+
+/* Animations */
+@keyframes ai-spin {
+  to { --ai-angle: 360deg; }
+}
+
+@keyframes ai-breathe {
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.06); }
+}
+
+@keyframes ai-twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .ai-magic .ai-aura,
+  .ai-magic .ai-ring,
+  .ai-magic .ai-spark {
+    animation: none !important;
+  }
+}
+
+/* Fallback : si @property n'est pas supporté, animation simple par rotation */
+@supports not (background: conic-gradient(from 0deg, red)) {
+  .ai-magic .ai-aura,
+  .ai-magic .ai-ring {
+    background: linear-gradient(135deg, #b47cfe, #fb6ccb, #ff8064, #ffd700, #6dd5fa, #5b7fff);
+  }
+}
