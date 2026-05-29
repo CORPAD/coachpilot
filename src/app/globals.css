@@ -7,19 +7,50 @@
   --brand-primary: #0ea5e9;
   --brand-secondary: #0f172a;
   --brand-accent: #22c55e;
-  --bg-from: #ffffff;
-  --bg-to: #d4d4d8; /* zinc-300 — vrai gris clair, gradient visible */
+  /* Gradient avec stops intermédiaires pour une transition plus douce */
+  --bg-stop-1: #ffffff;
+  --bg-stop-2: #fafafa;
+  --bg-stop-3: #f4f4f5;
+  --bg-stop-4: #e4e4e7;
+  --bg-stop-5: #d4d4d8;
 }
 
 .dark {
-  --bg-from: #000000;
-  --bg-to: #3f3f46; /* zinc-700 — vrai gris foncé, gradient visible */
+  --bg-stop-1: #000000;
+  --bg-stop-2: #09090b;
+  --bg-stop-3: #18181b;
+  --bg-stop-4: #27272a;
+  --bg-stop-5: #3f3f46;
 }
 
 html {
-  background: linear-gradient(135deg, var(--bg-from) 0%, var(--bg-to) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--bg-stop-1) 0%,
+    var(--bg-stop-2) 25%,
+    var(--bg-stop-3) 50%,
+    var(--bg-stop-4) 75%,
+    var(--bg-stop-5) 100%
+  );
   background-attachment: fixed;
   min-height: 100vh;
+}
+
+/* Couche de grain SVG ultra subtile, dithérise le gradient et supprime
+   les bandes visibles sur les dégradés sombres */
+html::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+}
+
+.dark html::before {
+  opacity: 0.08;
 }
 
 body {
