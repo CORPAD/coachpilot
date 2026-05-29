@@ -7,7 +7,15 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
       ref={ref}
       type={type}
       className={cn(
-        "flex h-10 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full rounded-lg",
+        "border border-zinc-200 dark:border-zinc-700/80",
+        "bg-white/80 dark:bg-zinc-950/60 backdrop-blur",
+        "px-3 py-2 text-sm",
+        "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
+        "transition-[border-color,box-shadow,background] duration-150",
+        "focus-visible:outline-none focus-visible:border-[var(--brand-primary)]",
+        "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/20",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -21,7 +29,15 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       className={cn(
-        "flex min-h-[80px] w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50",
+        "flex min-h-[80px] w-full rounded-lg",
+        "border border-zinc-200 dark:border-zinc-700/80",
+        "bg-white/80 dark:bg-zinc-950/60 backdrop-blur",
+        "px-3 py-2 text-sm",
+        "placeholder:text-zinc-400 dark:placeholder:text-zinc-500",
+        "transition-[border-color,box-shadow,background] duration-150",
+        "focus-visible:outline-none focus-visible:border-[var(--brand-primary)]",
+        "focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/20",
+        "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
