@@ -87,14 +87,8 @@ export default async function CoachDashboard() {
                 : `${clients.length} client${clients.length > 1 ? "s" : ""} suivis · ${weekSessions} séance${weekSessions > 1 ? "s" : ""} cette semaine.`}
             </p>
           </div>
-          <div className="flex gap-4 flex-wrap items-center">
+          <div className="flex-shrink-0">
             <CoachAIButton size="md" />
-            <Link href="/coach/clients/new">
-              <Button size="lg">
-                <UserPlus className="h-4 w-4" />
-                Nouveau client
-              </Button>
-            </Link>
           </div>
         </div>
       </section>
