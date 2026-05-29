@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
@@ -25,7 +26,12 @@ export function AIAssistant({
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -85,7 +91,9 @@ export function AIAssistant({
           `Suggère un ajustement nutrition pour ${scope.clientName}`,
         ];
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       {open && (
         <div
@@ -184,6 +192,7 @@ export function AIAssistant({
           </div>
         </div>
       </aside>
-    </>
+    </>,
+    document.body
   );
 }
