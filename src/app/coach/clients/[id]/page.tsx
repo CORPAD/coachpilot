@@ -65,7 +65,7 @@ export default async function ClientDetailPage({
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-4 flex-wrap items-center">
             <ClientAIButton clientId={client.id} clientName={client.name} />
             <Link href={`/coach/clients/${client.id}/edit`}>
               <Button variant="outline">

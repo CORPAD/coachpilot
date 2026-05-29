@@ -71,14 +71,14 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Aura externe floue qui pulse */
+/* Aura externe floue qui pulse — contenue pour ne pas empiéter sur les éléments voisins */
 .ai-magic .ai-aura {
   position: absolute;
-  inset: -8px;
-  border-radius: 22px;
+  inset: -3px;
+  border-radius: 17px;
   background: var(--ai-rainbow);
-  filter: blur(16px);
-  opacity: 0.55;
+  filter: blur(9px);
+  opacity: 0.5;
   z-index: -2;
   animation:
     ai-spin 6s linear infinite,
@@ -132,8 +132,8 @@ body {
 
 /* Hover : aura plus intense + très léger lift */
 .ai-magic:hover .ai-aura {
-  opacity: 0.95;
-  filter: blur(22px);
+  opacity: 0.85;
+  filter: blur(13px);
 }
 .ai-magic:hover .ai-inner {
   transform: translateY(-1px);

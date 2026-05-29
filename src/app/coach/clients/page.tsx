@@ -18,8 +18,8 @@ export default async function ClientsPage() {
           <h1 className="text-2xl md:text-3xl font-bold">Mes clients</h1>
           <p className="text-zinc-500 mt-1">{clients.length} client{clients.length > 1 ? "s" : ""} au total</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <CoachAIButton variant="outline" />
+        <div className="flex gap-4 flex-wrap items-center">
+          <CoachAIButton />
           <Link href="/coach/clients/new">
             <Button>
               <UserPlus className="h-4 w-4" />
